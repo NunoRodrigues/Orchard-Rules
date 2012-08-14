@@ -12,8 +12,8 @@ namespace Orchard.Rules.Services {
         /// Triggers a specific Event, and provides the tokens context if the event is 
         /// actually executed
         /// </summary>
-        /// <param name="category">The category of the event to trigger, e.g. Content</param>
-        /// <param name="type">The type of the event to trigger, e.g. Publish</param>
+        /// <param name="category">The category of the event to action, e.g. Content</param>
+        /// <param name="type">The type of the event to action, e.g. Publish</param>
         /// <param name="tokensContext">An object containing the tokens context</param>
         void TriggerEvent(string category, string type, Func<Dictionary<string, object>> tokensContext);
 

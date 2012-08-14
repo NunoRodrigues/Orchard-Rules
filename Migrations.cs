@@ -1,9 +1,11 @@
 ﻿using Orchard.Data.Migration;
 
 namespace Orchard.Rules {
-    public class Migrations : DataMigrationImpl {
+    public class Migrations : DataMigrationImpl
+    {
 
-        public int Create() {
+        public int Create()
+        {
             SchemaBuilder.CreateTable("RuleRecord",
                 table => table
                     .Column<int>("Id", c => c.PrimaryKey().Identity())
@@ -44,5 +46,22 @@ namespace Orchard.Rules {
 
             return 1;
         }
+
+        /*
+        public int UpdateFrom1()
+        {
+            SchemaBuilder.CreateTable("ActionRecord",
+                table => table
+                    .Column<int>("Id", c => c.PrimaryKey().Identity())
+                    .Column<string>("Category", c => c.WithLength(64))
+                    .Column<string>("Type", c => c.WithLength(64))
+                    .Column<string>("Parameters", c => c.Unlimited())
+                    .Column<int>("Position")
+                    .Column<int>("RuleRecord_id")
+                );
+
+            return 1;
+        }
+        */
     }
 }

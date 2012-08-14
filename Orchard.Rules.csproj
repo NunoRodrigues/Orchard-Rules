@@ -21,6 +21,10 @@
     </UpgradeBackupLocation>
     <TargetFrameworkProfile />
     <UseIISExpress>false</UseIISExpress>
+    <IISExpressSSLPort />
+    <IISExpressAnonymousAuthentication />
+    <IISExpressWindowsAuthentication />
+    <IISExpressUseClassicPipelineMode />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -79,6 +83,9 @@
     <Content Include="Views\Web.config" />
     <Content Include="Scripts\Web.config" />
     <Content Include="Styles\Web.config" />
+    <Compile Include="Events\ContentContainsEvent.cs" />
+    <Compile Include="Events\ContentContainsForms.cs" />
+    <Compile Include="Models\FieldTriggerRecord.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Content Include="Module.txt" />
     <Content Include="Web.config">
@@ -132,10 +139,12 @@
     <Compile Include="Models\TypeDescriptor.cs" />
     <Compile Include="Migrations.cs" />
     <Compile Include="Models\RuleRecord.cs" />
+    <Compile Include="Providers\FieldsTriggerForms.cs" />
     <Compile Include="Providers\ScheduleForms.cs" />
     <Compile Include="Providers\ScheduleActions.cs" />
     <Compile Include="Providers\NotificationForms.cs" />
     <Compile Include="Providers\NotificationActions.cs" />
+    <Compile Include="Providers\FieldsTriggerActions.cs" />
     <Compile Include="Services\FormParametersHelper.cs" />
     <Compile Include="Services\RulesServices.cs" />
     <Compile Include="Services\IActionProvider.cs" />

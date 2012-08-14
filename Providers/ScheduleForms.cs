@@ -40,7 +40,7 @@ namespace Orchard.Rules.Providers {
                             .Add(new SelectListItem { Value = "Month", Text = T("Months").Text }),
                         _Rule: Shape.SelectList(
                             Id: "RuleId", Name: "RuleId",
-                            Title: T("Rule to trigger"))
+                            Title: T("Rule to action"))
                         );
 
                     foreach (var rule in rules) {
