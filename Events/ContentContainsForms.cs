@@ -1,28 +1,58 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using System.Web.Mvc;
+using System.Linq;
 using Orchard.ContentManagement.MetaData;
 using Orchard.DisplayManagement;
 using Orchard.Events;
 using Orchard.Forms.Services;
 using Orchard.Localization;
+using Orchard.Rules.Models;
+using Orchard.Data;
+using Orchard.Core.Settings.Metadata.Records;
 
 namespace Orchard.Rules.Events
 {
+    public static class Extensions
+    {
+        public static string GetDisplayName(this Enum data)
+        {
+            MemberInfo memberInfo = data.GetType().GetMember(data.ToString()).FirstOrDefault();
+
+            if (memberInfo != null)
+            {
+                DisplayAttribute attribute = (DisplayAttribute)memberInfo.GetCustomAttributes(typeof(DisplayAttribute), false).FirstOrDefault();
+                return attribute.Name;
+            }
+
+            return string.Empty;
+        }
+    }
+
     public class ContentContainsForms : IFormProvider
     {
+        private readonly IRepository<ContentPartDefinitionRecord> _sourcesRepository;
         private readonly IContentDefinitionManager _contentDefinitionManager;
         protected dynamic Shape { get; set; }
         public Localizer T { get; set; }
 
         public ContentContainsForms(
             IShapeFactory shapeFactory,
-            IContentDefinitionManager contentDefinitionManager)
+            IContentDefinitionManager contentDefinitionManager,
+            IRepository<ContentPartDefinitionRecord> sourcesRepository)
         {
-            _contentDefinitionManager = contentDefinitionManager;
             Shape = shapeFactory;
+            _contentDefinitionManager = contentDefinitionManager;
+            _sourcesRepository = sourcesRepository;
             T = NullLocalizer.Instance;
         }
 
+        /// <summary>
+        /// Generates the form shown on the rules admin area
+        /// </summary>
+        /// <param name="context"></param>
         public void Describe(DescribeContext context)
         {
             Func<IShapeFactory, dynamic> form =
@@ -33,15 +63,55 @@ namespace Orchard.Rules.Events
                         Id: "AnyOfContentTypes",
                         _Parts: Shape.SelectList(
                             Id: "contenttypes", Name: "contenttypes",
-                            Title: T("Content types 2222"),
+                            Title: T("Content types"),
                             Description: T("Select some content types."),
                             Size: 10,
                             Multiple: true
                             ),
-                        _ActionData: Shape.Textbox(
-                            Id: "ContainsWords", Name: "ContainsWords",
-                            Title: T("Contains Words"),
-                            Classes: new[] { "textMedium" })
+                        _Word1: Shape.FieldSet(
+                            Id: ContentContainsItemNaming.GetGroupName(1),
+                            Title: T("Search for words"),
+                            _Source: Shape.SelectList(
+                                Id: ContentContainsItemNaming.GetSourceName(1), Name: ContentContainsItemNaming.GetSourceName(1),
+                                Multiple: false
+                                ),
+                            _Value: Shape.TextBox(
+                                Id: ContentContainsItemNaming.GetValueName(1), Name: ContentContainsItemNaming.GetValueName(1),
+                                Classes: new[] { "textMedium", "tokenized" }
+                                )
+                            ),
+                        _Word2: Shape.FieldSet(
+                            Id: ContentContainsItemNaming.GetGroupName(2),
+                            _Operation: Shape.SelectList(
+                                Id: ContentContainsItemNaming.GetOperationName(2), Name: ContentContainsItemNaming.GetOperationName(2),
+                                Size: 1,
+                                Multiple: false
+                                ),
+                            _Source: Shape.SelectList(
+                                Id: ContentContainsItemNaming.GetSourceName(2), Name: ContentContainsItemNaming.GetSourceName(2),
+                                Multiple: false
+                                ),
+                            _Value: Shape.TextBox(
+                                Id: ContentContainsItemNaming.GetValueName(2), Name: ContentContainsItemNaming.GetValueName(2),
+                                Classes: new[] { "textMedium", "tokenized" }
+                                )
+                            ),
+                        _Word3: Shape.FieldSet(
+                            Id: ContentContainsItemNaming.GetGroupName(3),
+                            _Operation: Shape.SelectList(
+                                Id: ContentContainsItemNaming.GetOperationName(3), Name: ContentContainsItemNaming.GetOperationName(3),
+                                Size: 1,
+                                Multiple: false
+                                ),
+                            _Source: Shape.SelectList(
+                                Id: ContentContainsItemNaming.GetSourceName(3), Name: ContentContainsItemNaming.GetSourceName(3),
+                                Multiple: false
+                                ),
+                            _Value: Shape.TextBox(
+                                Id: ContentContainsItemNaming.GetValueName(3), Name: ContentContainsItemNaming.GetValueName(3),
+                                Classes: new[] { "textMedium", "tokenized" }
+                                )
+                            )
                         );
 
                     f._Parts.Add(new SelectListItem { Value = "", Text = T("Any").Text });
@@ -51,11 +121,32 @@ namespace Orchard.Rules.Events
                         f._Parts.Add(new SelectListItem { Value = contentType.Name, Text = contentType.DisplayName });
                     }
 
+                    // Sources
+                    List<ContentPartDefinitionRecord> sources = _sourcesRepository.Table.Where(x => x.Hidden == false && x.Settings != null).OrderBy(x => x.Name).ToList();
+
+                    foreach (ContentPartDefinitionRecord source in sources)
+                    {
+                        f._Word1._Source.Add(new SelectListItem { Value = source.Id.ToString(), Text = source.Name.Replace("Part","") });
+                        f._Word2._Source.Add(new SelectListItem { Value = source.Id.ToString(), Text = source.Name.Replace("Part", "") });
+                        f._Word3._Source.Add(new SelectListItem { Value = source.Id.ToString(), Text = source.Name.Replace("Part", "") });
+                    }
+
+                    // Operators
+                    foreach (ContentContainsItemNaming.SearchOperators op in Enum.GetValues(typeof(ContentContainsItemNaming.SearchOperators)))
+                    {
+                        f._Word2._Operation.Add(new SelectListItem { Value = ((int)op).ToString(), Text = op.GetDisplayName() });
+                        f._Word3._Operation.Add(new SelectListItem { Value = ((int)op).ToString(), Text = op.GetDisplayName() });
+                    }
+
                     return f;
                 };
+            //_XPTO : Shape.Markup(
+            //                Value : "<span><b>YEAH!</b></span>"
+            //            ),
+
+            
 
             context.Form("SelectContentTypes", form);
-
         }
     }
 }

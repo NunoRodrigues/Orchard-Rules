@@ -1,10 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Net;
+using System.Reflection;
 using System.Web;
 using Orchard.ContentManagement;
 using Orchard.ContentManagement.Handlers;
+using Orchard.Core.Settings.Metadata.Records;
+using Orchard.Data;
 using Orchard.Localization;
+using Orchard.Rules.Models;
 using Orchard.Rules.Services;
 
 namespace Orchard.Rules.Events
@@ -24,8 +30,12 @@ namespace Orchard.Rules.Events
 
     public class ContentContainsEvent : IEventProvider
     {
-        public ContentContainsEvent()
+        // TODO: 
+        private static IRepository<ContentPartDefinitionRecord> _sourcesRepository;
+
+        public ContentContainsEvent(IRepository<ContentPartDefinitionRecord> sourcesRepository)
         {
+            _sourcesRepository = sourcesRepository;
             T = NullLocalizer.Instance;
         }
 
@@ -39,14 +49,13 @@ namespace Orchard.Rules.Events
             describe.For("Content", T("Content Items"), T("Content Items")).Element("Contains", T("Content Contains"), T("Content contains text"), condition, display, "SelectContentTypes");
         }
 
-        private static bool Condition(Models.EventContext context)
+        private static bool Condition(dynamic context) //Models.EventContext
         {
             bool IsContentCorrect = false;
             string contenttypes = context.Properties["contenttypes"];
             var content = context.Tokens["Content"] as IContent;
 
-            // "" means 'any'
-            if (String.IsNullOrEmpty(contenttypes))
+            if (String.IsNullOrEmpty(contenttypes)) // "" means 'any'
             {
                 IsContentCorrect = true;
             }
@@ -59,45 +68,62 @@ namespace Orchard.Rules.Events
 
             if (IsContentCorrect)
             {
-                // Pesquisa nas Parts que podem ter conteudo pelas palavras
-                var words = context.Properties["ContainsWords"];
-
                 ContentItem mainContent = (ContentItem)context.Tokens["Content"];
 
-                if (mainContent != null)
+                if (mainContent != null && _sourcesRepository != null)
                 {
-                    foreach(ContentPart part in mainContent.Parts) {
+                    ContentContainsList wordList = new ContentContainsList(context);
+                    
+                    foreach (ContentPart part in mainContent.Parts)
+                    {
                         Type type = part.GetType();
-                        
-                        // Title
-                        if (type == typeof(Core.Title.Models.TitlePart))
+
+                        ContentPartDefinitionRecord source = _sourcesRepository.Table.FirstOrDefault(x => x.Name.Contains(type.Name));
+                        if (source != null)
                         {
-                            Core.Title.Models.TitlePart title = (Core.Title.Models.TitlePart)part;
+                            System.Diagnostics.Debug.WriteLine(source.Id + " ::: " + source.Name);
 
-                            if(title.Title.Contains(words)) {
-                                return true;
-                            }
-                        }
+                            PropertyInfo[] props = type.GetProperties();
 
-                        // Body
-                        if (type == typeof(Core.Common.Models.BodyPart))
-                        {
-                            Core.Common.Models.BodyPart body = (Core.Common.Models.BodyPart)part;
-
-                            if (body.Text.Contains(words))
+                            // Title
+                            PropertyInfo title = props.FirstOrDefault(p => p.Name == "Title");
+                            if (title != null)
                             {
-                                return true;
+                                object value = title.GetValue(part, null);
+                                wordList.AddText(source.Id, value.ToString());
                             }
-                        }
 
-                        /*
-                        // Tags
-                        if (type == typeof(Orchard.Tags.Models.TagsPart))
-                        {
-                        
+                            // Body
+                            PropertyInfo body = props.FirstOrDefault(p => p.Name == "Body");
+                            if (body != null)
+                            {
+                                object value = body.GetValue(part, null);
+                                wordList.AddText(source.Id, value.ToString());
+                            }
+
+                            // Text
+                            PropertyInfo text = props.FirstOrDefault(p => p.Name == "Text");
+                            if (text != null)
+                            {
+                                object value = text.GetValue(part, null);
+                                wordList.AddText(source.Id, value.ToString());
+                            }
+
+                            // TODO : Tags
+                            PropertyInfo tags = props.FirstOrDefault(p => p.Name == "CurrentTags");
+                            if (tags != null)
+                            {
+                                /*
+                                object value = tags.GetValue(part, null);
+                                wordList.AddText(source.Id, value.ToString());
+                                 */
+                            }
+
+                            System.Diagnostics.Debug.WriteLine(" ::: ");
                         }
-                        */
                     }
+
+                    return wordList.Check();
                 }
             }
 
@@ -106,19 +132,36 @@ namespace Orchard.Rules.Events
 
         private LocalizedString Display(Models.EventContext context)
         {
+            // Words
+            ContentContainsList wordList = new ContentContainsList(context);
+
+            string words = "";
+            for (int i = 0; i < wordList.List.Count(); i++)
+            {
+                ContentContainsItem item = wordList.List[i];
+                if (item != null)
+                {
+                    if (i <= 0)
+                    {
+                        words += "\"" + item.Value + "\"";
+                    }
+                    else
+                    {
+                        words += " " + T(item.Operation.GetDisplayName()).Text;
+                        words += " \"" + item.Value + "\"";
+                    }
+                }
+            }
+
             // Content Type
             var contenttypes = context.Properties["contenttypes"];
-
-            // Words
-            var words = context.Properties["ContainsWords"];
-
 
             if (String.IsNullOrEmpty(contenttypes))
             {
                 return T("When any content has the text ({1}).", contenttypes, words);
             }
             
-            return T("When content with types ({0}) has the text ({1}).", contenttypes, words);
+            return T("When content with type(s) ({0}) has the text ({1}).", contenttypes, words);
         }
     }
 

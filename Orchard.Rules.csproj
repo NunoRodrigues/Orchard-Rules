@@ -85,6 +85,7 @@
     <Content Include="Styles\Web.config" />
     <Compile Include="Events\ContentContainsEvent.cs" />
     <Compile Include="Events\ContentContainsForms.cs" />
+    <Compile Include="Models\ContentContainsCondition.cs" />
     <Compile Include="Models\FieldTriggerRecord.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Content Include="Module.txt" />
