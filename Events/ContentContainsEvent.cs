@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -30,7 +31,6 @@ namespace Orchard.Rules.Events
 
     public class ContentContainsEvent : IEventProvider
     {
-        // TODO: 
         private static IRepository<ContentPartDefinitionRecord> _sourcesRepository;
 
         public ContentContainsEvent(IRepository<ContentPartDefinitionRecord> sourcesRepository)
@@ -72,58 +72,9 @@ namespace Orchard.Rules.Events
 
                 if (mainContent != null && _sourcesRepository != null)
                 {
-                    ContentContainsList wordList = new ContentContainsList(context);
-                    
-                    foreach (ContentPart part in mainContent.Parts)
-                    {
-                        Type type = part.GetType();
+                    ContentContainsList wordList = new ContentContainsList(_sourcesRepository, context);
 
-                        ContentPartDefinitionRecord source = _sourcesRepository.Table.FirstOrDefault(x => x.Name.Contains(type.Name));
-                        if (source != null)
-                        {
-                            System.Diagnostics.Debug.WriteLine(source.Id + " ::: " + source.Name);
-
-                            PropertyInfo[] props = type.GetProperties();
-
-                            // Title
-                            PropertyInfo title = props.FirstOrDefault(p => p.Name == "Title");
-                            if (title != null)
-                            {
-                                object value = title.GetValue(part, null);
-                                wordList.AddText(source.Id, value.ToString());
-                            }
-
-                            // Body
-                            PropertyInfo body = props.FirstOrDefault(p => p.Name == "Body");
-                            if (body != null)
-                            {
-                                object value = body.GetValue(part, null);
-                                wordList.AddText(source.Id, value.ToString());
-                            }
-
-                            // Text
-                            PropertyInfo text = props.FirstOrDefault(p => p.Name == "Text");
-                            if (text != null)
-                            {
-                                object value = text.GetValue(part, null);
-                                wordList.AddText(source.Id, value.ToString());
-                            }
-
-                            // TODO : Tags
-                            PropertyInfo tags = props.FirstOrDefault(p => p.Name == "CurrentTags");
-                            if (tags != null)
-                            {
-                                /*
-                                object value = tags.GetValue(part, null);
-                                wordList.AddText(source.Id, value.ToString());
-                                 */
-                            }
-
-                            System.Diagnostics.Debug.WriteLine(" ::: ");
-                        }
-                    }
-
-                    return wordList.Check();
+                    return wordList.Check(mainContent.Parts);
                 }
             }
 
@@ -133,7 +84,7 @@ namespace Orchard.Rules.Events
         private LocalizedString Display(Models.EventContext context)
         {
             // Words
-            ContentContainsList wordList = new ContentContainsList(context);
+            ContentContainsList wordList = new ContentContainsList(_sourcesRepository, context);
 
             string words = "";
             for (int i = 0; i < wordList.List.Count(); i++)

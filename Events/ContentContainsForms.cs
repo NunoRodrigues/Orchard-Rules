@@ -69,46 +69,46 @@ namespace Orchard.Rules.Events
                             Multiple: true
                             ),
                         _Word1: Shape.FieldSet(
-                            Id: ContentContainsItemNaming.GetGroupName(1),
+                            Id: ContentContainsItem.GetGroupName(1),
                             Title: T("Search for words"),
                             _Source: Shape.SelectList(
-                                Id: ContentContainsItemNaming.GetSourceName(1), Name: ContentContainsItemNaming.GetSourceName(1),
+                                Id: ContentContainsItem.GetSourceName(1), Name: ContentContainsItem.GetSourceName(1),
                                 Multiple: false
                                 ),
                             _Value: Shape.TextBox(
-                                Id: ContentContainsItemNaming.GetValueName(1), Name: ContentContainsItemNaming.GetValueName(1),
+                                Id: ContentContainsItem.GetValueName(1), Name: ContentContainsItem.GetValueName(1),
                                 Classes: new[] { "textMedium", "tokenized" }
                                 )
                             ),
                         _Word2: Shape.FieldSet(
-                            Id: ContentContainsItemNaming.GetGroupName(2),
+                            Id: ContentContainsItem.GetGroupName(2),
                             _Operation: Shape.SelectList(
-                                Id: ContentContainsItemNaming.GetOperationName(2), Name: ContentContainsItemNaming.GetOperationName(2),
+                                Id: ContentContainsItem.GetOperationName(2), Name: ContentContainsItem.GetOperationName(2),
                                 Size: 1,
                                 Multiple: false
                                 ),
                             _Source: Shape.SelectList(
-                                Id: ContentContainsItemNaming.GetSourceName(2), Name: ContentContainsItemNaming.GetSourceName(2),
+                                Id: ContentContainsItem.GetSourceName(2), Name: ContentContainsItem.GetSourceName(2),
                                 Multiple: false
                                 ),
                             _Value: Shape.TextBox(
-                                Id: ContentContainsItemNaming.GetValueName(2), Name: ContentContainsItemNaming.GetValueName(2),
+                                Id: ContentContainsItem.GetValueName(2), Name: ContentContainsItem.GetValueName(2),
                                 Classes: new[] { "textMedium", "tokenized" }
                                 )
                             ),
                         _Word3: Shape.FieldSet(
-                            Id: ContentContainsItemNaming.GetGroupName(3),
+                            Id: ContentContainsItem.GetGroupName(3),
                             _Operation: Shape.SelectList(
-                                Id: ContentContainsItemNaming.GetOperationName(3), Name: ContentContainsItemNaming.GetOperationName(3),
+                                Id: ContentContainsItem.GetOperationName(3), Name: ContentContainsItem.GetOperationName(3),
                                 Size: 1,
                                 Multiple: false
                                 ),
                             _Source: Shape.SelectList(
-                                Id: ContentContainsItemNaming.GetSourceName(3), Name: ContentContainsItemNaming.GetSourceName(3),
+                                Id: ContentContainsItem.GetSourceName(3), Name: ContentContainsItem.GetSourceName(3),
                                 Multiple: false
                                 ),
                             _Value: Shape.TextBox(
-                                Id: ContentContainsItemNaming.GetValueName(3), Name: ContentContainsItemNaming.GetValueName(3),
+                                Id: ContentContainsItem.GetValueName(3), Name: ContentContainsItem.GetValueName(3),
                                 Classes: new[] { "textMedium", "tokenized" }
                                 )
                             )
@@ -132,7 +132,7 @@ namespace Orchard.Rules.Events
                     }
 
                     // Operators
-                    foreach (ContentContainsItemNaming.SearchOperators op in Enum.GetValues(typeof(ContentContainsItemNaming.SearchOperators)))
+                    foreach (ContentContainsItem.SearchOperators op in Enum.GetValues(typeof(ContentContainsItem.SearchOperators)))
                     {
                         f._Word2._Operation.Add(new SelectListItem { Value = ((int)op).ToString(), Text = op.GetDisplayName() });
                         f._Word3._Operation.Add(new SelectListItem { Value = ((int)op).ToString(), Text = op.GetDisplayName() });

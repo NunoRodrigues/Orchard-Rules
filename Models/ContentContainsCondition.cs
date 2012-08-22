@@ -2,77 +2,41 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Reflection;
 using System.Web;
+using Orchard.ContentManagement;
+using Orchard.Core.Settings.Metadata.Records;
+using Orchard.Data;
 
 namespace Orchard.Rules.Models
 {
     public class ContentContainsList
     {
+        private IRepository<ContentPartDefinitionRecord> _sourcesRepository;
+
         private int nWordsStart = 1;
         private int nWordsEnd = 3;
 
         private List<ContentContainsItem> _list;
         public List<ContentContainsItem> List { get { return this._list; } }
 
-        public ContentContainsList(Models.EventContext context)
+        public ContentContainsList(IRepository<ContentPartDefinitionRecord> sourcesRepository, Models.EventContext context)
         {
+            _sourcesRepository = sourcesRepository;
             _list = new List<ContentContainsItem>();
-            for (int i = nWordsStart; i <= nWordsEnd; i++)
+
+            if (context != null)
             {
-                ContentContainsItem item = ContentContainsItem.Load(context, i);
-
-                if (item != null)
+                for (int i = nWordsStart; i <= nWordsEnd; i++)
                 {
-                    _list.Add(item);
-                }
-            }
-        }
+                    ContentContainsItem item = ContentContainsItem.Load(context, i);
 
-        public bool CheckOld(string text)
-        {
-            if (_list != null && _list.Count > 0)
-            {
-                bool containsPrevious = text.Contains(_list[0].Value);
-                if (_list.Count == 1)
-                {
-                    return containsPrevious;
-                }
-                else if (_list.Count > 1)
-                {
-                    bool defaultValue = false;
-
-                    for (int i = 1; i < _list.Count(); i++)
+                    if (item != null)
                     {
-                        bool containsNext = text.Contains(_list[i].Value);
-                        ContentContainsItemNaming.SearchOperators operation = _list[i].Operation;
-
-                        switch (operation)
-                        {
-                            case ContentContainsItemNaming.SearchOperators.And:
-                                if (containsPrevious == false || containsNext == false)
-                                {
-                                    return false;
-                                }
-
-                                defaultValue = true;
-                                break;
-                            case ContentContainsItemNaming.SearchOperators.Or:
-                                if (containsPrevious == true || containsNext == true)
-                                {
-                                    return true;
-                                }
-
-                                defaultValue = false;
-                                break;
-                        }
-
-                        containsPrevious = containsNext;
+                        _list.Add(item);
                     }
-
-                    return defaultValue;
                 }
             }
-            return false;
         }
 
         public void AddText(int ContentPartDefinitionRecordId, string text)
@@ -83,7 +47,67 @@ namespace Orchard.Rules.Models
             }
         }
 
-        public bool Check()
+        private void Clear()
+        {
+            foreach (ContentContainsItem item in _list)
+            {
+                if(item.Tests.Count > 0 ) item.Tests.Clear();
+            }
+        }
+
+        private void Load(IEnumerable<ContentPart> parts)
+        {
+            foreach (ContentPart part in parts)
+            {
+                Type type = part.GetType();
+
+                ContentPartDefinitionRecord source = _sourcesRepository.Table.FirstOrDefault(x => x.Name.Contains(type.Name));
+                if (source != null)
+                {
+                    System.Diagnostics.Debug.WriteLine(source.Id + " ::: " + source.Name);
+
+                    PropertyInfo[] props = type.GetProperties();
+
+                    // Title
+                    PropertyInfo title = props.FirstOrDefault(p => p.Name == "Title");
+                    if (title != null)
+                    {
+                        object value = title.GetValue(part, null);
+                        AddText(source.Id, value.ToString());
+                    }
+
+                    // Body
+                    PropertyInfo body = props.FirstOrDefault(p => p.Name == "Body");
+                    if (body != null)
+                    {
+                        object value = body.GetValue(part, null);
+                        AddText(source.Id, value.ToString());
+                    }
+
+                    // Text
+                    PropertyInfo text = props.FirstOrDefault(p => p.Name == "Text");
+                    if (text != null)
+                    {
+                        object value = text.GetValue(part, null);
+                        AddText(source.Id, value.ToString());
+                    }
+
+                    // TODO : Tags
+                    PropertyInfo tags = props.FirstOrDefault(p => p.Name == "CurrentTags");
+                    if (tags != null)
+                    {
+                        /*
+                        object value = tags.GetValue(part, null);
+                        wordList.AddText(source.Id, value.ToString());
+                         */
+                    }
+
+                    System.Diagnostics.Debug.WriteLine(" ::: ");
+                }
+            }
+        }
+
+        private bool Check()
         {
             if (_list != null && _list.Count > 0)
             {
@@ -99,11 +123,11 @@ namespace Orchard.Rules.Models
                     for (int i = 1; i < _list.Count(); i++)
                     {
                         bool nextCheck = _list[i].Check();
-                        ContentContainsItemNaming.SearchOperators operation = _list[i].Operation;
+                        ContentContainsItem.SearchOperators operation = _list[i].Operation;
 
                         switch (operation)
                         {
-                            case ContentContainsItemNaming.SearchOperators.And:
+                            case ContentContainsItem.SearchOperators.And:
                                 if (previousCheck == false || nextCheck == false)
                                 {
                                     return false;
@@ -111,7 +135,7 @@ namespace Orchard.Rules.Models
 
                                 defaultValue = true;
                                 break;
-                            case ContentContainsItemNaming.SearchOperators.Or:
+                            case ContentContainsItem.SearchOperators.Or:
                                 if (previousCheck == true || nextCheck == true)
                                 {
                                     return true;
@@ -130,103 +154,16 @@ namespace Orchard.Rules.Models
 
             return false;
         }
-    }
 
-
-
-    public static class ContentContainsItemNaming
-    {
-        public enum SearchOperators
+        public bool Check(IEnumerable<ContentPart> parts)
         {
-            [Display(Name = "And")]
-            And,
 
-            [Display(Name = "Or")]
-            Or
-        }
+            Clear();
 
-        public static string GetGroupName(int id)
-        {
-            return "Word" + id + "Operation";
-        }
+            Load(parts);
 
-        public static string GetOperationName(int id)
-        {
-            return "Word" + id + "Operation";
-        }
-
-        public static string GetSourceName(int id)
-        {
-            return "Word" + id + "Source";
-        }
-
-        public static string GetValueName(int id)
-        {
-            return "Word" + id + "Value";
+            return Check();
         }
     }
 
-    public class ContentContainsItem
-    {
-        private ContentContainsItemNaming.SearchOperators _operation;
-        public ContentContainsItemNaming.SearchOperators Operation { get { return _operation; } }
-
-        private int _contentPartId;
-        public int ContentPartId { get { return _contentPartId; } }
-
-        private string _value;
-        public string Value { get { return _value; } }
-
-        private List<string> _tests;
-        public List<string> Tests { get { return _tests; } }
-
-        /// <summary>
-        /// Loads the vale
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        public static ContentContainsItem Load(Models.EventContext context, int id)
-        {
-            string valueName = ContentContainsItemNaming.GetValueName(id);
-            if (context.Properties.ContainsKey(valueName))
-            {
-                string value = context.Properties[valueName];
-
-                if (string.IsNullOrEmpty(value) == false) // If no value is defined then this condition is not important
-                {
-                    ContentContainsItemNaming.SearchOperators operation = ContentContainsItemNaming.SearchOperators.And; // Default Condition
-
-                    string operationName = ContentContainsItemNaming.GetOperationName(id);
-                    if (context.Properties.ContainsKey(operationName))
-                    {
-                        operation = (ContentContainsItemNaming.SearchOperators)int.Parse(context.Properties[operationName]);
-                    }
-
-                    int sourceID = 0;
-                    string sourceName = ContentContainsItemNaming.GetSourceName(id);
-                    if (context.Properties.ContainsKey(sourceName))
-                    {
-                        sourceID = int.Parse(context.Properties[sourceName]);
-                    }
-
-                    return new ContentContainsItem() { _operation = operation, _contentPartId = sourceID, _value = value, _tests = new List<string>() };
-                }
-            }
-
-            return null;
-        }
-
-        public bool Check()
-        {
-            foreach (string test in _tests)
-            {
-                if (test.Contains(_value))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
 }
